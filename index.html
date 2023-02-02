@@ -1,0 +1,104 @@
+<html>
+    <head>
+        <title>Random Book Picker</title>
+        <link rel="stylesheet" href="css/style.css">
+        <link rel="stylesheet" href="https://unpkg.com/chota@latest">
+        <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+        <script src="https://unpkg.com/axios@1.2.3/dist/axios.js"></script>
+    </head>
+    <body>
+        <div id="app">
+            <div class="title">
+                <h1>Books</h1>
+            </div>
+            <section>
+                <div v-if="!hide">
+                    <input type="text" v-model="goodreadsurl" placeholder="GoodReads URL"><button @click="getBookList">Get Books</button>
+                </div>
+                <div v-else>
+                    <button @click="randomize">Randomize</button>
+                    <button @click="filteredBooklist = booklist; currentBook = null">Show all</button>
+                </div>
+
+            </section>
+            <section v-if="!loading">
+                <div class="row" v-if="!currentBook">
+                    <div class="card" v-for="book in filteredBooklist">
+                        <header>
+                            <div class="bookTitle">{{book.title}}</div>
+                        </header>
+                            <div class="bookCover"><img :src="book.cover" /></div>
+                            <footer class="is-right">
+                                <div class="readStatus">{{book.read}}</div>
+                            </footer>
+                    </div>
+                </div>
+                <div v-else>
+                    <h2>{{ currentBook.title }}</h2>
+                    <img :src="currentBook.cover"></img>
+                    <p>{{ currentBook.description }}</p>
+            </section>
+
+            <section v-else>
+                <p>Loading...</p>
+            </section>
+
+        </div>
+
+    </body>
+    <script>
+        const { createApp } = Vue
+
+
+        createApp({
+            data() {
+               return {
+                   loading: null,
+                   hide: false,
+                   currentBook: null,
+                   booklist: [],
+                   filteredBooklist: [],
+            }
+        },
+        methods: {
+            // get booklist from goodreads
+            async getBookList() {
+                this.loading = true
+                this.hide = true
+                var grurl = this.goodreadsurl.replace("list", "list_rss")
+                // bypasse CORS
+
+                axios.get('https://api.allorigins.win/raw?url=' + grurl)
+                    .then(response => {
+                        console.log(grurl)
+                        var parser = new DOMParser();
+                        var xmlDoc = parser.parseFromString(response.data, "text/xml");
+                        var items = xmlDoc.getElementsByTagName("item");
+                        console.log(items)
+                        for (var i = 0; i < items.length; i++) {
+                            var book = {}
+                            book.title = items[i].getElementsByTagName("title")[0].childNodes[0].nodeValue
+                            book.cover = items[i].getElementsByTagName("book_medium_image_url")[0].childNodes[0].nodeValue
+                            book.read = false
+                            this.booklist.push(book)
+                        }
+                        this.loading = false
+                        this.filteredBooklist = this.booklist
+                    })
+                    .catch(error => {
+                        console.log(error)
+                    })
+            },
+            randomize() {
+                this.currentBook = this.filteredBooklist[Math.floor(Math.random() * this.filteredBooklist.length)]
+            }
+        },
+            mounted () {
+            }
+        }).mount('#app')
+    </script>
+
+</html>
+
+
+
