@@ -63,6 +63,11 @@
         methods: {
             // get booklist from goodreads
             async getBookList() {
+                // check if url is empty and if it is a goodreads url
+                if (!this.goodreadsurl || !this.goodreadsurl.includes("goodreads.com")) {
+                    alert("Please enter a valid GoodReads URL")
+                    return
+                }
                 this.loading = true
                 this.hide = true
                 var grurl = this.goodreadsurl.replace("list", "list_rss")
