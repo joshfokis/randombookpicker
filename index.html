@@ -47,9 +47,10 @@
 
     </body>
     <script>
+        // import Vue
         const { createApp } = Vue
 
-
+        // create the app
         createApp({
             data() {
                return {
@@ -60,9 +61,13 @@
                    filteredBooklist: [],
             }
         },
+
+        // define methods
         methods: {
+
             // get booklist from goodreads
             async getBookList() {
+
                 // check if url is empty and if it is a goodreads url
                 if (!this.goodreadsurl || !this.goodreadsurl.includes("goodreads.com")) {
                     alert("Please enter a valid GoodReads URL")
@@ -70,16 +75,20 @@
                 }
                 this.loading = true
                 this.hide = true
-                var grurl = this.goodreadsurl.replace("list", "list_rss")
-                // bypasse CORS
 
+                // replace list with list_rss to get the xml
+                var grurl = this.goodreadsurl.replace("list", "list_rss")
+                
+                // bypasse CORS and get the xml from goodreads
                 axios.get('https://api.allorigins.win/raw?url=' + grurl)
                     .then(response => {
-                        console.log(grurl)
+
+                        // parse the xml
                         var parser = new DOMParser();
                         var xmlDoc = parser.parseFromString(response.data, "text/xml");
                         var items = xmlDoc.getElementsByTagName("item");
-                        console.log(items)
+
+                        // parse the xml and add the books to the booklist
                         for (var i = 0; i < items.length; i++) {
                             var book = {}
                             book.title = items[i].getElementsByTagName("title")[0].childNodes[0].nodeValue
@@ -87,6 +96,7 @@
                             book.read = false
                             this.booklist.push(book)
                         }
+                        // set the filtered booklist to the booklist
                         this.loading = false
                         this.filteredBooklist = this.booklist
                     })
@@ -94,6 +104,7 @@
                         console.log(error)
                     })
             },
+            // randomize the booklist and set the current book
             randomize() {
                 this.currentBook = this.filteredBooklist[Math.floor(Math.random() * this.filteredBooklist.length)]
             }
