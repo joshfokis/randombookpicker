@@ -2,7 +2,6 @@
     <head>
         <title>Random Book Picker</title>
         <link rel="stylesheet" href="css/style.css">
-        <link rel="stylesheet" href="https://unpkg.com/chota@latest">
         <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
         <script src="https://unpkg.com/axios@1.2.3/dist/axios.js"></script>
     </head>
@@ -21,16 +20,13 @@
                 </div>
 
             </section>
-            <section v-if="!loading">
+            <section v-if="!loading" id="booklist">
                 <div class="row" v-if="!currentBook">
                     <div class="card" v-for="book in filteredBooklist">
                         <header>
                             <div class="bookTitle">{{book.title}}</div>
                         </header>
-                            <div class="bookCover"><img :src="book.cover" /></div>
-                            <footer class="is-right">
-                                <div class="readStatus">{{book.read}}</div>
-                            </footer>
+                        <div class="bookCover"><img :src="book.cover" /></div>
                     </div>
                 </div>
                 <div v-else>
@@ -92,8 +88,7 @@
                         for (var i = 0; i < items.length; i++) {
                             var book = {}
                             book.title = items[i].getElementsByTagName("title")[0].childNodes[0].nodeValue
-                            book.cover = items[i].getElementsByTagName("book_medium_image_url")[0].childNodes[0].nodeValue
-                            book.read = false
+                            book.cover = items[i].getElementsByTagName("book_large_image_url")[0].childNodes[0].nodeValue
                             this.booklist.push(book)
                         }
                         // set the filtered booklist to the booklist
