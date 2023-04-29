@@ -7,20 +7,19 @@
     </head>
     <body>
         <div id="app">
-            <div class="title">
-                <h1>Books</h1>
-            </div>
-            <section>
-                <div v-if="!hide">
+            <section class="main">
+                <div class="title">
+                    <h1>Books</h1>
+                </div>
+                <div class="urlForm" v-if="!hide">
                     <input type="text" v-model="goodreadsurl" placeholder="GoodReads URL"><button @click="getBookList">Get Books</button>
                 </div>
                 <div v-else>
-                    <button @click="randomize">Randomize</button>
-                    <button @click="filteredBooklist = booklist; currentBook = null">Show all</button>
+                    <button v-if="!currentBook" @click="randomize">Randomize</button>
+                    <button v-if="currentBook" @click="filteredBooklist = booklist; currentBook = null">Show all</button>
                 </div>
 
-            </section>
-            <section v-if="!loading" id="booklist">
+            <div v-if="!loading" id="booklist">
                 <div class="row" v-if="!currentBook">
                     <div class="card" v-for="book in filteredBooklist">
                         <header>
@@ -29,15 +28,19 @@
                         <div class="bookCover"><img :src="book.cover" /></div>
                     </div>
                 </div>
-                <div v-else>
-                    <h2>{{ currentBook.title }}</h2>
-                    <img :src="currentBook.cover"></img>
-                    <p>{{ currentBook.description }}</p>
-            </section>
+                <div v-else class="currentBook">
+                    <div class="container">
+                        <img class="cover" :src="currentBook.cover"></img>
+                        <h2>{{currentBook.title}}</h2>
+                        <div class="description" v-html="currentBook.description"></div>
+                    </div>
+                </div>
+            </div>
 
-            <section v-else>
+            <div v-else>
                 <p>Loading...</p>
-            </section>
+            </div>
+        </section>
 
         </div>
 
@@ -87,8 +90,11 @@
                         // parse the xml and add the books to the booklist
                         for (var i = 0; i < items.length; i++) {
                             var book = {}
+                            book.description = items[i].getElementsByTagName("book_description")[0].childNodes[0].nodeValue
                             book.title = items[i].getElementsByTagName("title")[0].childNodes[0].nodeValue
                             book.cover = items[i].getElementsByTagName("book_large_image_url")[0].childNodes[0].nodeValue
+                            // get the isbn and query the google books api to get the description
+                            //book.isbn = items[i].getElementsByTagName("isbn")[0].childNodes[0].nodeValue
                             this.booklist.push(book)
                         }
                         // set the filtered booklist to the booklist
@@ -102,6 +108,14 @@
             // randomize the booklist and set the current book
             randomize() {
                 this.currentBook = this.filteredBooklist[Math.floor(Math.random() * this.filteredBooklist.length)]
+                // add the description to the current book
+                //axios.get('https://www.googleapis.com/books/v1/volumes?q=isbn:' + this.currentBook.isbn)
+                //    .then(response => {
+                //        this.currentBook.description = response.data.items[0].volumeInfo.description
+                //    })
+                //    .catch(error => {
+                //        console.log(error)
+                //    })
             }
         },
             mounted () {
