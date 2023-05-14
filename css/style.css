@@ -111,10 +111,15 @@ body {
 }
 
 .card img {
+    height: vmax(200px, 20vw);
+    object-fit: cover;
+}
+
+/* .card img {
     height: max(200px, 20vw);
     width: max(200px, 20vw)
     object-fit: cover;
-}
+} */
 
 .currentBook {
     display: flex;
