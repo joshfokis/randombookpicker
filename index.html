@@ -1,6 +1,7 @@
 <html>
     <head>
         <title>Random Book Picker</title>
+        <link rel="stylesheet" href="css/_normalize.css">
         <link rel="stylesheet" href="css/style.css">
         <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
         <script src="https://unpkg.com/axios@1.2.3/dist/axios.js"></script>
@@ -9,13 +10,17 @@
         <div id="app">
             <section class="main">
                 <div class="title">
-                    <h1>Books</h1>
+                    <h1>Random Book Picker</h1>
                 </div>
                 <div class="urlForm" v-if="!hide">
-                    <input type="text" v-model="goodreadsurl" placeholder="GoodReads URL"><button @click="getBookList">Get Books</button>
+                    <input type="text" v-model="goodreadsurl" placeholder="GoodReads URL"><button class="btn" @click="getBookList">Get Books</button>
+                    <div class="instructions">
+                        Copy the url of your GoodReads to read shelf and paste it in the field. Click Get Books to get your books from the shelf.
+                        Once the books have loaded you can click Randomize to have it pick the next book for you to read.
+                    </div>
                 </div>
                 <div v-else>
-                    <button v-if="!currentBook" @click="randomize">Randomize</button>
+                    <button v-if="!currentBook" @click="randomize" class="btn" >Randomize</button>
                     <button v-if="currentBook" @click="filteredBooklist = booklist; currentBook = null">Show all</button>
                 </div>
 
@@ -28,12 +33,18 @@
                         <div class="bookCover"><img :src="book.cover" /></div>
                     </div>
                 </div>
-                <div v-else class="currentBook">
+                <div v-else>
+                  <div class="currentbook">
                     <div class="container">
-                        <img class="cover" :src="currentBook.cover"></img>
                         <h2>{{currentBook.title}}</h2>
-                        <div class="description" v-html="currentBook.description"></div>
+                        <div class="">
+                          <div class="row">
+                          <img class="cover" :src="currentBook.cover"></img>
+                          <div class="description" v-html="currentBook.description"></div>
+                          </div>
+                        </div>
                     </div>
+                  </div>
                 </div>
             </div>
 
@@ -41,7 +52,7 @@
                 <p>Loading...</p>
             </div>
         </section>
-
+        <footer class="footer">Copyright 2022</footer>
         </div>
 
     </body>
