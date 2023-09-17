@@ -2,6 +2,7 @@
     <head>
         <title>Random Book Picker</title>
         <link rel="stylesheet" href="css/_normalize.css">
+        <link rel="stylesheet" href="css/loading.css">
         <link rel="stylesheet" href="css/style.css">
         <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
         <script src="https://unpkg.com/axios@1.2.3/dist/axios.js"></script>
@@ -20,8 +21,10 @@
                     </div>
                 </div>
                 <div v-else>
+                  <div v-if="!loading">
                     <button v-if="!currentBook" @click="randomize" class="btn" >Randomize</button>
                     <button v-if="currentBook" @click="filteredBooklist = booklist; currentBook = null">Show all</button>
+                  </div>
                 </div>
 
             <div v-if="!loading" id="booklist">
@@ -49,7 +52,41 @@
             </div>
 
             <div v-else>
-                <p>Loading...</p>
+
+              <div class="loading">
+              
+                <div class="book">
+                  <div class="inner">
+                    <div class="left"></div>
+                    <div class="middle"></div>
+                    <div class="right"></div>
+                  </div>
+              
+                  <ul>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                  </ul>
+                </div>
+              
+                <br>
+                  <p>Loading...</p>
+                </div>
             </div>
         </section>
         <footer class="footer">Copyright 2022</footer>
