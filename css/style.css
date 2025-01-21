@@ -7,6 +7,11 @@ body {
   width: 100%;
 }
 
+* {
+  box-sizing: border-box;
+  /* outline: 1px solid red; */
+}
+
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -110,9 +115,11 @@ body {
   text-overflow: ellipsis;
 }
 
-.card img {
-  height: vmax(200px, 20vw);
-  object-fit: cover;
+.card .bookCover img {
+  width: 250px;
+  aspect-ratio: 3/2;
+  /* height: vmax(200px, 20vw); */
+  object-fit: contain;
 }
 
 /* .card img {
@@ -124,20 +131,22 @@ body {
 .currentBook {
   justify-content: center;
 }
+
 .currentBook .row {
   align-items: center;
   padding: 0 4px;
   justify-content: center;
 }
+
 .currentBook .container .title {
   font-size: 2em;
   font-weight: bold;
   color: #000;
 }
 
-.currentBook .container .image {
-  width: 200px;
-  height: 200px;
+.currentBook .container .row .cover {
+  /* width: 200px; */
+  height: 400px;
   object-fit: cover;
   float: left;
   position: relative;
@@ -147,10 +156,10 @@ body {
   font-size: 1.2em;
   padding-left: 10px;
   width: 50%;
-  height: 500px;
+  /* height: 500px; */
   text-align: left;
   position: relative;
-  overflow-y: scroll;
+  /* overflow-y: scroll; */
 }
 
 footer {
