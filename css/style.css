@@ -12,25 +12,66 @@ body {
   /* outline: 1px solid red; */
 }
 
+:root {
+  --bg: #f5f5f5;
+  --fg: #2c3e50;
+  --title-fg: #000000;
+  --muted: #666666;
+  --faint: #888888;
+  --card-bg: #ffffff;
+  --card-shadow: rgba(0, 0, 0, 0.2);
+  --border: #cccccc;
+  --input-bg: #ffffff;
+  --placeholder-bg: #eae6de;
+  --placeholder-fg: #9b968c;
+  --error: #c0392b;
+  --accent: #4caf50;
+  --accent-hover: #45a049;
+  --accent-fg: #2e7d32;
+  --accent-off: #4caf50;
+  --accent-soft: #e8f5e9;
+}
+
+html[data-theme='dark'] {
+  --bg: #1a1b22;
+  --fg: #e2e2ea;
+  --title-fg: #f2f2f5;
+  --muted: #a6a6b2;
+  --faint: #8b8b98;
+  --card-bg: #24252e;
+  --card-shadow: rgba(0, 0, 0, 0.55);
+  --border: #3d3e49;
+  --input-bg: #24252e;
+  --placeholder-bg: #2c2d38;
+  --placeholder-fg: #8a8578;
+  --error: #ff7f72;
+  --accent: #4caf50;
+  --accent-hover: #5cc460;
+  --accent-fg: #7dd884;
+  --accent-off: #5cc460;
+  --accent-soft: #263a2a;
+}
+
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
-  color: #2c3e50;
+  color: var(--fg);
   margin: 0;
   padding: 0;
   overflow: hidden;
 }
 
 body {
-  background-color: #f5f5f5;
+  background-color: var(--bg);
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 .title {
   font-size: 40px;
   font-weight: bold;
-  color: #000;
+  color: var(--title-fg);
   left: 50%;
 }
 
@@ -39,18 +80,18 @@ body {
   padding: 12px 20px;
   margin: 8px 0;
   box-sizing: border-box;
-  border: 2px solid #ccc;
+  border: 2px solid var(--border);
   border-radius: 4px;
   outline: none;
 }
 
 .urlForm input:focus {
-  border: 2px solid #555;
+  border: 2px solid var(--muted);
 }
 
 .urlForm button {
   width: 20%;
-  background-color: #4caf50;
+  background-color: var(--accent);
   color: white;
   padding: 14px 20px;
   margin: 8px 0;
@@ -60,12 +101,12 @@ body {
 }
 
 .urlForm button:hover {
-  background-color: #45a049;
+  background-color: var(--accent-hover);
 }
 
 .urlForm {
   border-radius: 5px;
-  background-color: #f5f5f5;
+  background-color: var(--bg);
   padding: 20px;
   width: 50%;
   margin: 0 auto;
@@ -85,16 +126,17 @@ body {
 }
 
 .card {
-  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 8px 0 var(--card-shadow);
   transition: 0.3s;
   width: 300px;
   border-radius: 5px;
   padding: 10px;
   margin: 10px;
+  background-color: var(--card-bg);
 }
 
 .card:hover {
-  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 16px 0 var(--card-shadow);
 }
 
 .container {
@@ -167,4 +209,177 @@ footer {
   padding-left: 10px;
   padding-bottom: 5px;
   position: absolute;
+}
+
+/* CSV import UI */
+.urlForm .fileLabel {
+  display: inline-block;
+  background-color: var(--accent);
+  color: white;
+  padding: 14px 20px;
+  margin: 8px 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.urlForm .fileLabel:hover {
+  background-color: var(--accent-hover);
+}
+
+#csvInput {
+  display: none;
+}
+
+.noCover {
+  width: 250px;
+  aspect-ratio: 3 / 2;
+  max-height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--placeholder-bg);
+  border-radius: 4px;
+  color: var(--placeholder-fg);
+  margin: 0 auto;
+}
+
+.currentbook .row {
+  align-items: flex-start;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.currentbook img.cover {
+  height: 400px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--placeholder-bg);
+}
+
+.currentbook .description {
+  max-width: 600px;
+  text-align: left;
+  padding: 0 20px;
+}
+
+.currentbook .description .bookAuthor {
+  width: auto;
+  font-size: 1.1em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.urlForm .sampleBtn {
+  display: inline-block;
+  background: none;
+  border: 2px solid var(--accent-off);
+  color: var(--accent-fg);
+  padding: 12px 18px;
+  margin: 8px 8px 8px 0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1em;
+  vertical-align: middle;
+}
+
+.urlForm .sampleBtn:hover {
+  background-color: var(--accent-soft);
+}
+
+.hint {
+  display: block;
+  color: var(--faint);
+  font-size: 0.9em;
+  margin-top: 8px;
+}
+
+.error {
+  color: var(--error);
+  margin-top: 10px;
+  white-space: pre-line;
+}
+
+.instructions {
+  padding-top: 10px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* toolbar action button (Randomize / Show all) */
+.btn {
+  background-color: var(--accent);
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1em;
+}
+
+.btn:hover {
+  background-color: var(--accent-hover);
+}
+
+/* floating dark mode toggle */
+.themeToggle {
+  position: fixed;
+  top: 12px;
+  right: 14px;
+  z-index: 40;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  background: var(--card-bg);
+  color: var(--fg);
+  font-size: 1.15em;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.themeToggle:hover {
+  border-color: var(--accent);
+  transform: scale(1.06);
+}
+
+/* loaded-view toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 10px auto;
+  flex-wrap: wrap;
+}
+
+.toolbar select {
+  padding: 8px 12px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  font-size: 1em;
+  background: var(--input-bg);
+  color: var(--fg);
+}
+
+.count {
+  color: var(--muted);
+}
+
+.resetBtn {
+  background: none;
+  border: none;
+  color: var(--faint);
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 0.9em;
+}
+
+.resetBtn:hover {
+  color: var(--fg);
+}
+
+.currentbook .description p {
+  white-space: pre-line;
 }

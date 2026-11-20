@@ -1,6 +1,18 @@
 <html>
 
 <head>
+  <meta charset="utf-8">
+  <script>
+    // set the theme before first paint so there is no flash of the wrong mode;
+    // remembers the visitor's choice, else follows their system preference
+    (function () {
+      var saved = null
+      try { saved = localStorage.getItem('rbp-theme') } catch (e) {}
+      var dark = saved ? saved === 'dark'
+        : !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      if (dark) document.documentElement.setAttribute('data-theme', 'dark')
+    })()
+  </script>
   <title>Random Book Picker</title>
   <link rel="stylesheet" href="css/_normalize.css">
   <link rel="stylesheet" href="css/loading.css">
@@ -10,44 +22,71 @@
 </head>
 
 <body>
+  <button id="themeToggle" class="themeToggle" type="button" title="Toggle dark mode" aria-label="Toggle dark mode"></button>
   <div id="app">
     <section class="main">
       <div class="title">
         <h1>Random Book Picker</h1>
       </div>
+
+      <!-- Public app: visitors pick their own export, or play with the committed sample -->
       <div class="urlForm" v-if="!hide">
-        <input type="text" v-model="goodreadsurl" placeholder="GoodReads URL"><button class="btn"
-          @click="getBookList">Get Books</button>
+        <label class="fileLabel" for="csvInput">Choose your Goodreads export (CSV)</label>
+        <input type="file" id="csvInput" accept=".csv,text/csv" @change="handleExportFile">
         <div class="instructions">
-          Copy the url of your GoodReads to read shelf and paste it in the field. Click Get Books to get your books from
-          the shelf.
-          Once the books have loaded you can click Randomize to have it pick the next book for you to read.
+          Goodreads retired their RSS feeds (Oct 2026), so the app reads the official library
+          export: on goodreads.com (logged in as you) go to My Books &rarr; Import / Export
+          &rarr; &quot;Export your library&quot;, then pick the downloaded file here. It is read
+          entirely in your browser &mdash; nothing is uploaded anywhere, and no account access is
+          involved.
+          Covers come from OpenLibrary and descriptions from Google Books &mdash; no keys, no CORS
+          proxies, no Goodreads network calls at all.
         </div>
+        <button class="sampleBtn" v-if="sampleAvailable !== false" @click="trySampleCsv">Try the sample shelf</button>
+        <span v-else class="hint">
+          sample_library.csv is missing from this deployment &mdash; commit it next to index.html
+          to bring back the demo button.
+        </span>
+        <div class="error" v-if="error">{{ error }}</div>
       </div>
+
+      <!-- Loaded view: toolbar + grid/pick -->
       <div v-else>
-        <div v-if="!loading">
+        <div v-if="!loading" class="toolbar">
+          <select v-model="selectedShelf" @change="loadShelf">
+            <option v-for="s in shelves" :key="s" :value="s">{{ s }}</option>
+          </select>
+          <span class="count">{{ filteredBooklist.length }} book(s)</span>
           <button v-if="!currentBook" @click="randomize" class="btn">Randomize</button>
-          <button v-if="currentBook" @click="filteredBooklist = booklist; currentBook = null">Show all</button>
+          <button v-if="currentBook" @click="showPick" class="btn">Show all</button>
+          <button @click="resetImport" class="resetBtn">Use a different export</button>
         </div>
       </div>
 
       <div v-if="!loading" id="booklist">
         <div class="row" v-if="!currentBook">
-          <div class="card" v-for="book in filteredBooklist">
+          <div class="card" v-for="book in filteredBooklist" :key="book.bookId || book.title">
             <header>
-              <div class="bookTitle">{{book.title}}</div>
+              <div class="bookTitle" :title="book.title">{{ book.title }}</div>
+              <div class="bookAuthor" :title="book.author">{{ book.author }}</div>
             </header>
-            <div class="bookCover"><img :src="book.cover" /></div>
+            <div class="bookCover">
+              <img v-if="book.cover" :src="book.cover" @error="coverErr(book)">
+              <div v-else class="noCover">(ノ°▽°)ノ no cover</div>
+            </div>
           </div>
         </div>
         <div v-else>
           <div class="currentbook">
             <div class="container">
-              <h2>{{currentBook.title}}</h2>
+              <h2>{{ currentBook.title }}</h2>
               <div class="">
                 <div class="row">
-                  <img class="cover" :src="currentBook.cover"></img>
-                  <div class="description" v-html="currentBook.description"></div>
+                  <img class="cover" v-if="currentBook.cover" :src="currentBook.cover" @error="coverErr(currentBook)">
+                  <div class="description">
+                    <div class="bookAuthor" v-if="currentBook.author">{{ currentBook.author }}</div>
+                    <p>{{ currentBook.description }}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -99,7 +138,28 @@
 </body>
 <script>
   // import Vue
-  const {createApp} = Vue
+  const { createApp } = Vue
+
+  const GOOGLE_BOOKS = 'https://www.googleapis.com/books/v1/volumes'
+
+  // public demo data committed next to index.html — same-origin fetch, no account needed
+  const SAMPLE_CSV = 'sample_library.csv'
+
+  // dark mode toggle wiring (the button sits outside the Vue app)
+  const themeToggle = document.getElementById('themeToggle')
+  function syncThemeToggle() {
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark'
+    themeToggle.textContent = dark ? '☀️' : '🌙'
+    themeToggle.title = dark ? 'Switch to light mode' : 'Switch to dark mode'
+  }
+  themeToggle.addEventListener('click', () => {
+    const dark = document.documentElement.getAttribute('data-theme') !== 'dark'
+    if (dark) document.documentElement.setAttribute('data-theme', 'dark')
+    else document.documentElement.removeAttribute('data-theme')
+    try { localStorage.setItem('rbp-theme', dark ? 'dark' : 'light') } catch (e) { /* private mode */ }
+    syncThemeToggle()
+  })
+  syncThemeToggle()
 
   // create the app
   createApp({
@@ -107,6 +167,11 @@
       return {
         loading: null,
         hide: false,
+        error: '',
+        csvName: '',
+        sampleAvailable: null,
+        shelves: [],
+        selectedShelf: 'all',
         currentBook: null,
         booklist: [],
         filteredBooklist: [],
@@ -116,61 +181,260 @@
     // define methods
     methods: {
 
-      // get booklist from goodreads
-      async getBookList() {
+      // check on startup whether sample_library.csv exists in this deployment.
+      // same-origin fetch — no CORS, works on GitHub Pages or any static host.
+      async probeSampleCsv() {
+        try {
+          const r = await fetch(SAMPLE_CSV, { cache: 'no-cache' })
+          this.sampleAvailable = r.ok
+        } catch (err) {
+          this.sampleAvailable = false
+        }
+      },
 
-        // check if url is empty and if it is a goodreads url
-        if (!this.goodreadsurl || !this.goodreadsurl.includes("goodreads.com")) {
-          alert("Please enter a valid GoodReads URL")
+      // load the committed sample shelf — drive-by visitors get a zero-setup demo
+      async trySampleCsv() {
+        this.error = ''
+        this.loading = true
+        this.currentBook = null
+        let text = null
+        try {
+          const r = await fetch(SAMPLE_CSV, { cache: 'no-cache' })
+          if (r.ok) text = await r.text()
+        } catch (err) {
+          // offline / file:// — the error message below still explains
+        }
+        if (text == null) {
+          this.sampleAvailable = false
+          this.loading = false
+          this.error = 'Could not load ' + SAMPLE_CSV + ' — it needs to sit next to this page.'
           return
         }
-        this.loading = true
-        this.hide = true
-
-        // replace list with list_rss to get the xml
-        var grurl = this.goodreadsurl.replace("list", "list_rss")
-
-        // bypasse CORS and get the xml from goodreads
-        axios.get('https://api.allorigins.win/raw?url=' + grurl)
-          .then(response => {
-
-            // parse the xml
-            var parser = new DOMParser();
-            var xmlDoc = parser.parseFromString(response.data, "text/xml");
-            var items = xmlDoc.getElementsByTagName("item");
-
-            // parse the xml and add the books to the booklist
-            for (var i = 0; i < items.length; i++) {
-              var book = {}
-              book.description = items[i].getElementsByTagName("book_description")[0].childNodes[0].nodeValue
-              book.title = items[i].getElementsByTagName("title")[0].childNodes[0].nodeValue
-              book.cover = items[i].getElementsByTagName("book_large_image_url")[0].childNodes[0].nodeValue
-              // get the isbn and query the google books api to get the description
-              //book.isbn = items[i].getElementsByTagName("isbn")[0].childNodes[0].nodeValue
-              this.booklist.push(book)
-            }
-            // set the filtered booklist to the booklist
-            this.loading = false
-            this.filteredBooklist = this.booklist
-          })
-          .catch(error => {
-            console.log(error)
-          })
+        if (!this.ingestCsv(text, SAMPLE_CSV)) {
+          this.error = 'The sample (' + SAMPLE_CSV + ') is not a valid Goodreads export.'
+        }
       },
-      // randomize the booklist and set the current book
+
+      // handle the Goodreads library export CSV chosen in the file input
+      async handleExportFile(ev) {
+        const file = (ev.target.files && ev.target.files[0]) || null
+        // clear the input so picking the same file again still fires change
+        ev.target.value = ''
+        if (!file) return
+
+        this.error = ''
+        this.loading = true
+        this.currentBook = null
+
+        let text = ''
+        try {
+          text = await file.text()
+        } catch (err) {
+          this.loading = false
+          this.error = 'Could not read the file: ' + err
+          return
+        }
+        this.ingestCsv(text, file.name)
+      },
+
+      // parse a library export and jump straight into the filtered grid; true on success
+      ingestCsv(text, name) {
+        const { headers, rows } = this.parseCsv(text)
+        const col = header => headers.findIndex(h => h.toLowerCase() === header.toLowerCase())
+        const iTitle = col('Title'), iAuthor = col('Author l-f'), iIsbn = col('ISBN'),
+          iIsbn13 = col('ISBN13'), iShelf = col('Bookshelves'), iExc = col('Exclusive Shelf'),
+          iBookId = col('Book Id')
+
+        if (iTitle < 0) {
+          this.loading = false
+          this.error = 'No "Title" column in that file — is this really a Goodreads export?'
+          return false
+        }
+
+        const clean = v => (v == null ? '' : String(v).trim())
+        // Goodreads wraps ISBNs as ="0123456" so Excel keeps leading zeros — unwrap them
+        const cleanIsbn = v => {
+          v = clean(v)
+          if (v.startsWith('=')) v = v.replace(/^=\s*"?/, '').replace(/"?$/, '')
+          return v.replace(/[^0-9Xx]/g, '')
+        }
+
+        const books = []
+        const shelfSet = new Set()
+        for (const r of rows) {
+          const title = clean(iTitle >= 0 ? r[iTitle] : '')
+          if (!title) continue
+
+          const shelves = []
+          if (iShelf >= 0) {
+            clean(r[iShelf]).split(',').forEach(s => {
+              s = clean(s)
+              if (s && !shelves.includes(s)) shelves.push(s)
+            })
+          }
+          if (iExc >= 0) {
+            const exc = clean(r[iExc])
+            if (exc && !shelves.includes(exc)) shelves.push(exc)
+          }
+          shelves.forEach(s => shelfSet.add(s))
+
+          books.push({
+            title: title,
+            author: iAuthor >= 0 ? clean(r[iAuthor]) : '',
+            isbn: iIsbn >= 0 ? cleanIsbn(r[iIsbn]) : '',
+            isbn13: iIsbn13 >= 0 ? cleanIsbn(r[iIsbn13]) : '',
+            bookId: iBookId >= 0 ? clean(r[iBookId]) : '',
+            shelves: shelves,
+            description: '',
+            cover: null,
+            coverList: [],
+            coverIdx: 0,
+          })
+        }
+
+        if (!books.length) {
+          this.loading = false
+          this.error = 'No books found in that CSV.'
+          return false
+        }
+
+        this.booklist = books
+        this.shelves = ['all', ...[...shelfSet].sort((a, b) => a.localeCompare(b))]
+        this.selectedShelf = this.shelves.includes('to-read') ? 'to-read' : 'all'
+        this.csvName = name
+        this.loadShelf() // also flips hide -> grid view
+        this.loading = false
+        return true
+      },
+
+      // RFC4180-ish CSV parser: quoted fields, escaped "" quotes, embedded newlines
+      parseCsv(text) {
+        text = text.replace(/^\uFEFF/, '') // BOM
+        const rows = []
+        let row = [], field = '', inQuotes = false
+        for (let i = 0; i < text.length; i++) {
+          const c = text[i]
+          if (inQuotes) {
+            if (c === '"') {
+              if (text[i + 1] === '"') { field += '"'; i++ }
+              else inQuotes = false
+            } else field += c
+          } else if (c === '"') {
+            inQuotes = true
+          } else if (c === ',') {
+            row.push(field); field = ''
+          } else if (c === '\n') {
+            row.push(field); field = ''
+            rows.push(row); row = []
+          } else if (c !== '\r') {
+            field += c
+          }
+        }
+        if (field !== '' || row.length) { row.push(field); rows.push(row) }
+        const headers = rows.length ? rows.shift().map(h => h.trim()) : []
+        return { headers, rows: rows.filter(r => r.some(v => v.trim() !== '')) }
+      },
+
+      // filter the booklist down to the chosen shelf and attach cover URL candidates
+      loadShelf() {
+        this.hide = true
+        this.currentBook = null
+        const shelf = this.selectedShelf
+        this.filteredBooklist = shelf === 'all'
+          ? this.booklist.slice()
+          : this.booklist.filter(b => b.shelves.includes(shelf))
+        this.filteredBooklist.forEach(b => {
+          b.coverList = this.coverCandidates(b, 'M')
+          b.coverIdx = 0
+          b.cover = b.coverList[0] || null
+        })
+      },
+
+      // cover image URL fallback chain: OpenLibrary -> Google Books
+      // (Goodreads' own photo endpoint redirects to a signup page when logged out)
+      coverCandidates(book, size) {
+        const urls = []
+        const zoom = size === 'L' ? 2 : 1
+        const isbn = book.isbn13 || book.isbn
+        if (isbn) {
+          urls.push('https://covers.openlibrary.org/b/isbn/' + encodeURIComponent(isbn) + '-' + size + '.jpg?default=false')
+          urls.push('https://books.google.com/books/content?vid=ISBN' + encodeURIComponent(isbn) + '&printsec=frontcover&img=1&zoom=' + zoom)
+        }
+        return urls
+      },
+
+      // advance the fallback chain when a cover image fails to load
+      coverErr(book) {
+        if (!book.coverList || book.coverIdx >= book.coverList.length - 1) {
+          book.cover = null
+          return
+        }
+        book.coverIdx++
+        book.cover = book.coverList[book.coverIdx]
+      },
+
+      // pick a random book from the shelf and fetch its description
       randomize() {
-        this.currentBook = this.filteredBooklist[Math.floor(Math.random() * this.filteredBooklist.length)]
-        // add the description to the current book
-        //axios.get('https://www.googleapis.com/books/v1/volumes?q=isbn:' + this.currentBook.isbn)
-        //    .then(response => {
-        //        this.currentBook.description = response.data.items[0].volumeInfo.description
-        //    })
-        //    .catch(error => {
-        //        console.log(error)
-        //    })
+        if (!this.filteredBooklist.length) return
+        const book = this.filteredBooklist[Math.floor(Math.random() * this.filteredBooklist.length)]
+        book.coverList = this.coverCandidates(book, 'L')
+        book.coverIdx = 0
+        book.cover = book.coverList[0] || null
+        book.description = 'Consulting Google Books...'
+        this.currentBook = book
+        this.fetchDescription(book)
+      },
+
+      // back to the grid
+      showPick() {
+        this.currentBook = null
+      },
+
+      // go back to the import screen
+      resetImport() {
+        this.hide = false
+        this.error = ''
+        this.csvName = ''
+        this.shelves = []
+        this.selectedShelf = 'all'
+        this.currentBook = null
+        this.booklist = []
+        this.filteredBooklist = []
+      },
+
+      // description from Google Books: isbn-first, title+author fallback; plain text
+      async fetchDescription(book) {
+        const tried = new Set()
+        const queries = []
+        if (book.isbn13 || book.isbn) queries.push('isbn:' + (book.isbn13 || book.isbn))
+        let q = ''
+        if (book.title) q += 'intitle:' + book.title + ' '
+        if (book.author) q += 'inauthor:' + book.author
+        if (q.trim()) queries.push(q.trim())
+
+        for (const query of queries) {
+          if (tried.has(query)) continue
+          tried.add(query)
+          try {
+            const r = await axios.get(GOOGLE_BOOKS + '?q=' + encodeURIComponent(query) + '&maxResults=1')
+            if (this.currentBook !== book) return // user already re-randomized
+            const vi = r.data && r.data.items && r.data.items[0] && r.data.items[0].volumeInfo
+            if (vi && vi.description) {
+              book.description = vi.description
+              return
+            }
+          } catch (err) {
+            // keep walking the fallback queries
+          }
+        }
+        if (this.currentBook === book) {
+          book.description = 'No description found for this one (Google Books may be rate-limiting this network — try again in a minute).'
+        }
       }
     },
     mounted() {
+      // probe whether the sample CSV is deployed so the demo button can show
+      this.probeSampleCsv()
     }
   }).mount('#app')
 </script>
